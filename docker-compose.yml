@@ -8,8 +8,8 @@ services:
     container_name: main-database
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
+      POSTGRES_USER: ${POSTGRES_AGENT_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_AGENT_PASSWORD:-secret}
       POSTGRES_DB: ${POSTGRES_DB:-appdb}
     ports:
       - "5432:5432"
@@ -34,14 +34,18 @@ services:
       context: ./whatsapp-gw
       dockerfile: Dockerfile
     container_name: whatsapp-gw
+    hostname: whatsapp-gw
     restart: unless-stopped
+    shm_size: "1gb"
     environment:
-      MAIN_SERVICE_URL: http://localhost:8000
+      MAIN_SERVICE_URL: http://social-media-agent:8000
       DB_HOST: main-database
       DB_PORT: 5432
       DB_NAME: appdb
       DB_USER: whatsapp_gw
       DB_PASSWORD: whatsapp_gw_secret
+      DB_SSL: "false"
+      PGSSLMODE: disable
     ports:
       - "3000:3000"
       - "3001:3001"
@@ -56,33 +60,31 @@ services:
     networks:
       - backend
 
-#  social-media-agent-main:
-#    image: ghcr.io/${GITHUB_ORG:-your-org}/${AGENT_IMAGE:-social-media-agent-main}:${AGENT_TAG:-latest}
-#    build:
-#      context: social-media-agent
-#      dockerfile: Dockerfile
-#    container_name: social-media-agent
-#    restart: unless-stopped
-#    environment:
-#      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-#      WHATSAPP_API_KEY: ${WHATSAPP_API_KEY}
-#      POSTGRES_URL: postgresql+asyncpg://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-secret}@main-database:5432/${POSTGRES_DB:-appdb}
-#      DYNAMODB_ARCHIVE_ENABLED: "false"
-#      SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-3600}
-#      DEBUG: ${DEBUG:-false}
-#      LOG_LEVEL: ${LOG_LEVEL:-INFO}
-#    ports:
-#      - "8080:8080"
-#    depends_on:
-#      main-database:
-#        condition: service_healthy
-#    healthcheck:
-#      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
-#      interval: 15s
-#      timeout: 5s
-#      retries: 3
-#    networks:
-#      - backend
+  social-media-agent:
+    image: ghcr.io/${GITHUB_ORG:-your-org}/${AGENT_IMAGE:-social-media-agent-main}:${AGENT_TAG:-latest}
+    build:
+      context: social-media-agent
+      dockerfile: Dockerfile
+    container_name: social-media-agent
+    restart: unless-stopped
+    env_file:
+      - .env
+      - .env.local
+    environment:
+      POSTGRES_URL: postgresql+asyncpg://${POSTGRES_AGENT_USER:-admin}:${POSTGRES_AGENT_PASSWORD:-secret}@main-database:5432/${POSTGRES_DB:-appdb}
+      DYNAMODB_ARCHIVE_ENABLED: "false"
+    ports:
+      - "8000:8000"
+    depends_on:
+      main-database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - backend
 
   # ─── Frontend ───────────────────────────────────────────────────────────────
 #
@@ -127,7 +129,7 @@ networks:
     driver: bridge
 
 
-#social-media-agent-main % docker compose down && docker volume rm social-media-agent-main_whatsapp-session social-media-agent-main_postgres_data 2>/dev/null; docker compose up -d
-#  --no-build
+# docker compose down && docker volume rm social-media-agent-main_postgres_data social-media-agent-main_whatsapp-session &&
+#      docker compose up -d --pull always
 
 # docker compose logs whatsapp-gw --tail 20
