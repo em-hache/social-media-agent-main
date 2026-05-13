@@ -1,0 +1,133 @@
+version: "3.9"
+
+services:
+  # ─── Databases ─────────────────────────────────────────────────────────────
+
+  main-database:
+    image: postgres:16-alpine
+    container_name: main-database
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
+      POSTGRES_DB: ${POSTGRES_DB:-appdb}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./main-database/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-appdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  # ─── Backend Services ───────────────────────────────────────────────────────
+
+  whatsapp-gw:
+    image: ghcr.io/${GITHUB_ORG:-your-org}/${WH_GW_IMAGE:-whatsapp-gw}:${WH_GW_TAG:-latest}
+    volumes:
+      - whatsapp-session:/app/.wwebjs_auth
+    build:
+      context: ./whatsapp-gw
+      dockerfile: Dockerfile
+    container_name: whatsapp-gw
+    restart: unless-stopped
+    environment:
+      MAIN_SERVICE_URL: http://localhost:8000
+      DB_HOST: main-database
+      DB_PORT: 5432
+      DB_NAME: appdb
+      DB_USER: whatsapp_gw
+      DB_PASSWORD: whatsapp_gw_secret
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    depends_on:
+      main-database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3001/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - backend
+
+#  social-media-agent-main:
+#    image: ghcr.io/${GITHUB_ORG:-your-org}/${AGENT_IMAGE:-social-media-agent-main}:${AGENT_TAG:-latest}
+#    build:
+#      context: social-media-agent
+#      dockerfile: Dockerfile
+#    container_name: social-media-agent
+#    restart: unless-stopped
+#    environment:
+#      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+#      WHATSAPP_API_KEY: ${WHATSAPP_API_KEY}
+#      POSTGRES_URL: postgresql+asyncpg://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-secret}@main-database:5432/${POSTGRES_DB:-appdb}
+#      DYNAMODB_ARCHIVE_ENABLED: "false"
+#      SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-3600}
+#      DEBUG: ${DEBUG:-false}
+#      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+#    ports:
+#      - "8080:8080"
+#    depends_on:
+#      main-database:
+#        condition: service_healthy
+#    healthcheck:
+#      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
+#      interval: 15s
+#      timeout: 5s
+#      retries: 3
+#    networks:
+#      - backend
+
+  # ─── Frontend ───────────────────────────────────────────────────────────────
+#
+#  nextjs-app:
+#    image: ghcr.io/${GITHUB_ORG:-your-org}/${NEXTJS_IMAGE:-nextjs-app}:${NEXTJS_TAG:-latest}
+#    build:
+#      context: ./nextjs-app
+#      dockerfile: Dockerfile
+#    container_name: nextjs-app
+#    restart: unless-stopped
+#    environment:
+#      NODE_ENV: ${NODE_ENV:-production}
+#      NEXT_PUBLIC_NODE_API_URL: ${NEXT_PUBLIC_NODE_API_URL:-http://localhost:3001}
+#      NEXT_PUBLIC_FASTAPI_URL: ${NEXT_PUBLIC_FASTAPI_URL:-http://localhost:8080}
+#      # Internal URLs (server-side)
+#      NODE_API_URL: http://whatsapp-gw:3001
+#      FASTAPI_URL: http://fastapi-service:8080
+#    ports:
+#      - "3000:3000"
+#    depends_on:
+#      - whatsapp-gw
+#      - fastapi-service
+#    healthcheck:
+#      test: ["CMD-SHELL", "curl -sf http://localhost:3000/ || exit 1"]
+#      interval: 15s
+#      timeout: 5s
+#      retries: 3
+#    networks:
+#      - backend
+#      - frontend
+
+# ─── Volumes & Networks ──────────────────────────────────────────────────────
+
+volumes:
+  postgres_data:
+  whatsapp-session:
+
+networks:
+  backend:
+    driver: bridge
+  frontend:
+    driver: bridge
+
+
+#social-media-agent-main % docker compose down && docker volume rm social-media-agent-main_whatsapp-session social-media-agent-main_postgres_data 2>/dev/null; docker compose up -d
+#  --no-build
+
+# docker compose logs whatsapp-gw --tail 20
