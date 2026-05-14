@@ -30,9 +30,6 @@ services:
     image: ghcr.io/${GITHUB_ORG:-your-org}/${WH_GW_IMAGE:-whatsapp-gw}:${WH_GW_TAG:-latest}
     volumes:
       - whatsapp-session:/app/.wwebjs_auth
-    build:
-      context: ./whatsapp-gw
-      dockerfile: Dockerfile
     container_name: whatsapp-gw
     hostname: whatsapp-gw
     restart: unless-stopped
@@ -62,9 +59,6 @@ services:
 
   social-media-agent:
     image: ghcr.io/${GITHUB_ORG:-your-org}/${AGENT_IMAGE:-social-media-agent-main}:${AGENT_TAG:-latest}
-    build:
-      context: social-media-agent
-      dockerfile: Dockerfile
     container_name: social-media-agent
     restart: unless-stopped
     env_file:
@@ -79,7 +73,7 @@ services:
       main-database:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -87,34 +81,33 @@ services:
       - backend
 
   # ─── Frontend ───────────────────────────────────────────────────────────────
-#
-#  nextjs-app:
-#    image: ghcr.io/${GITHUB_ORG:-your-org}/${NEXTJS_IMAGE:-nextjs-app}:${NEXTJS_TAG:-latest}
-#    build:
-#      context: ./nextjs-app
-#      dockerfile: Dockerfile
-#    container_name: nextjs-app
-#    restart: unless-stopped
-#    environment:
-#      NODE_ENV: ${NODE_ENV:-production}
-#      NEXT_PUBLIC_NODE_API_URL: ${NEXT_PUBLIC_NODE_API_URL:-http://localhost:3001}
-#      NEXT_PUBLIC_FASTAPI_URL: ${NEXT_PUBLIC_FASTAPI_URL:-http://localhost:8080}
-#      # Internal URLs (server-side)
-#      NODE_API_URL: http://whatsapp-gw:3001
-#      FASTAPI_URL: http://fastapi-service:8080
-#    ports:
-#      - "3000:3000"
-#    depends_on:
-#      - whatsapp-gw
-#      - fastapi-service
-#    healthcheck:
-#      test: ["CMD-SHELL", "curl -sf http://localhost:3000/ || exit 1"]
-#      interval: 15s
-#      timeout: 5s
-#      retries: 3
-#    networks:
-#      - backend
-#      - frontend
+
+  social-media-agent-web:
+    image: ghcr.io/${GITHUB_ORG:-your-org}/${AGENT_WEB_IMAGE:-social-media-agent-web}:${AGENT_WEB_TAG:-latest}
+    container_name: social-media-agent-web
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      NEXT_PUBLIC_NODE_API_URL: ${NEXT_PUBLIC_NODE_API_URL:-http://localhost:3001}
+      NEXT_PUBLIC_FASTAPI_URL: ${NEXT_PUBLIC_FASTAPI_URL:-http://localhost:8000}
+      # Internal URLs (server-side, used by next.config.js rewrites)
+      NODE_API_URL: http://whatsapp-gw:3000
+      MAIN_SERVICE_URL: http://social-media-agent:8000
+    ports:
+      - "3005:3005"
+    depends_on:
+      - whatsapp-gw
+      - social-media-agent
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3005/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - backend
+      - frontend
 
 # ─── Volumes & Networks ──────────────────────────────────────────────────────
 
@@ -127,9 +120,3 @@ networks:
     driver: bridge
   frontend:
     driver: bridge
-
-
-# docker compose down && docker volume rm social-media-agent-main_postgres_data social-media-agent-main_whatsapp-session &&
-#      docker compose up -d --pull always
-
-# docker compose logs whatsapp-gw --tail 20

@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     alias       VARCHAR(255) NOT NULL,
     email       VARCHAR(255) NOT NULL UNIQUE,
     number      VARCHAR(255) NOT NULL,
+    is_active   BOOLEAN NOT NULL DEFAULT TRUE,
     roles       JSON NOT NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
