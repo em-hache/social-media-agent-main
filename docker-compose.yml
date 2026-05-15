@@ -90,11 +90,11 @@ services:
       - .env.local
     environment:
       NODE_ENV: ${NODE_ENV:-production}
-      NEXT_PUBLIC_NODE_API_URL: ${NEXT_PUBLIC_NODE_API_URL:-http://localhost:3001}
-      NEXT_PUBLIC_FASTAPI_URL: ${NEXT_PUBLIC_FASTAPI_URL:-http://localhost:8000}
-      # Internal URLs (server-side, used by next.config.js rewrites)
-      NODE_API_URL: http://whatsapp-gw:3000
-      MAIN_SERVICE_URL: http://social-media-agent:8000
+      # Override .env.local server-side URLs for Docker networking
+      WHATSAPP_GW_URL: ${WHATSAPP_GW_URL}
+      MAIN_SERVICE_URL: ${MAIN_SERVICE_URL}
+      NEXT_PUBLIC_WHATSAPP_GW_URL: ${NEXT_PUBLIC_WHATSAPP_GW_URL}
+      NEXT_PUBLIC_MAIN_SERVICE: ${NEXT_PUBLIC_MAIN_SERVICE}
     ports:
       - "3005:3005"
     depends_on:
