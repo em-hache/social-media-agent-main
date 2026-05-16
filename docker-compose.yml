@@ -1,11 +1,12 @@
 version: "3.9"
 
 services:
-  # ─── Databases ─────────────────────────────────────────────────────────────
+  # ─── Databases (local development only) ───────────────────────────────────
 
   main-database:
     image: postgres:16-alpine
     container_name: main-database
+    profiles: [local]
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_AGENT_USER:-admin}
@@ -36,19 +37,20 @@ services:
     shm_size: "1gb"
     environment:
       MAIN_SERVICE_URL: http://social-media-agent:8000
-      DB_HOST: main-database
-      DB_PORT: 5432
-      DB_NAME: appdb
-      DB_USER: whatsapp_gw
-      DB_PASSWORD: whatsapp_gw_secret
-      DB_SSL: "false"
-      PGSSLMODE: disable
+      DB_HOST: ${DB_HOST:-main-database}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-appdb}
+      DB_USER: ${DB_USER:-whatsapp_gw}
+      DB_PASSWORD: ${DB_PASSWORD:-whatsapp_gw_secret}
+      DB_SSL: ${DB_SSL:-false}
+      PGSSLMODE: ${PGSSLMODE:-disable}
     ports:
       - "3000:3000"
       - "3001:3001"
     depends_on:
       main-database:
         condition: service_healthy
+        required: false
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:3001/health || exit 1"]
       interval: 15s
@@ -62,16 +64,22 @@ services:
     container_name: social-media-agent
     restart: unless-stopped
     env_file:
-      - .env
-      - .env.local
+      - envs/.secrets.env
     environment:
-      POSTGRES_URL: postgresql+asyncpg://${POSTGRES_AGENT_USER:-admin}:${POSTGRES_AGENT_PASSWORD:-secret}@main-database:5432/${POSTGRES_DB:-appdb}
-      DYNAMODB_ARCHIVE_ENABLED: "false"
+      ENV: ${ENV:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DEBUG: ${DEBUG:-false}
+      SESSION_STORE: ${SESSION_STORE:-memory}
+      POSTGRES_URL: ${POSTGRES_URL:-postgresql+asyncpg://admin:secret@main-database:5432/appdb}
+      DYNAMODB_ARCHIVE_ENABLED: ${DYNAMODB_ARCHIVE_ENABLED:-false}
+      DYNAMODB_TABLE_NAME: ${DYNAMODB_TABLE_NAME:-session_archive}
+      DYNAMODB_REGION: ${DYNAMODB_REGION:-eu-west-3}
     ports:
       - "8000:8000"
     depends_on:
       main-database:
         condition: service_healthy
+        required: false
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
       interval: 15s
@@ -87,10 +95,10 @@ services:
     container_name: social-media-agent-web
     restart: unless-stopped
     env_file:
-      - .env.local
+      - envs/.secrets.env
     environment:
       NODE_ENV: ${NODE_ENV:-production}
-      # Override .env.local server-side URLs for Docker networking
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
       WHATSAPP_GW_URL: ${WHATSAPP_GW_URL}
       MAIN_SERVICE_URL: ${MAIN_SERVICE_URL}
       NEXT_PUBLIC_WHATSAPP_GW_URL: ${NEXT_PUBLIC_WHATSAPP_GW_URL}

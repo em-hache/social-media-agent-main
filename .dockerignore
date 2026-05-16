@@ -1,6 +1,6 @@
 **/.git
 **/.gitignore
-**/.env
+envs/.env.local
 **/.env.*
 !**/.env.example
 **/node_modules
