@@ -255,6 +255,7 @@ docker compose ps
 
 ```bash
 cd ~/social-media-agent-main
+docker compose --env-file envs/.env.prod down
 git pull
 docker compose --env-file envs/.env.prod up -d --pull always
 ```
