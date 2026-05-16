@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # ─── Databases (local development only) ───────────────────────────────────
 
@@ -70,6 +68,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       DEBUG: ${DEBUG:-false}
       SESSION_STORE: ${SESSION_STORE:-memory}
+      WHISPER_MODEL: ${WHISPER_MODEL:-base}
       POSTGRES_URL: ${POSTGRES_URL:-postgresql+asyncpg://admin:secret@main-database:5432/appdb}
       DYNAMODB_ARCHIVE_ENABLED: ${DYNAMODB_ARCHIVE_ENABLED:-false}
       DYNAMODB_TABLE_NAME: ${DYNAMODB_TABLE_NAME:-session_archive}
