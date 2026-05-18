@@ -77,6 +77,8 @@ services:
       DYNAMODB_ARCHIVE_ENABLED: ${DYNAMODB_ARCHIVE_ENABLED:-false}
       DYNAMODB_TABLE_NAME: ${DYNAMODB_TABLE_NAME:-session_archive}
       DYNAMODB_REGION: ${DYNAMODB_REGION:-eu-west-3}
+    volumes:
+      - whisper-cache:/home/appuser/.cache/whisper
     ports:
       - "8000:8000"
     depends_on:
@@ -129,6 +131,7 @@ services:
 volumes:
   postgres_data:
   whatsapp-session:
+  whisper-cache:
 
 networks:
   backend:
