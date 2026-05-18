@@ -34,6 +34,8 @@ services:
     restart: unless-stopped
     shm_size: "1gb"
     environment:
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
       MAIN_SERVICE_URL: http://social-media-agent:8000
       DB_HOST: ${DB_HOST:-main-database}
       DB_PORT: ${DB_PORT:-5432}
@@ -64,6 +66,8 @@ services:
     env_file:
       - envs/.secrets.env
     environment:
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
       ENV: ${ENV:-production}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       DEBUG: ${DEBUG:-false}
@@ -97,9 +101,13 @@ services:
       - envs/.secrets.env
     environment:
       NODE_ENV: ${NODE_ENV:-production}
+      # NextAuth Configuration (MUST match backend JWT_SECRET_KEY)
+      NEXTAUTH_SECRET: ${JWT_SECRET_KEY}
       NEXTAUTH_URL: ${NEXTAUTH_URL}
+      # Service URLs
       WHATSAPP_GW_URL: ${WHATSAPP_GW_URL}
       MAIN_SERVICE_URL: ${MAIN_SERVICE_URL}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://social-media-agent:8000}
       NEXT_PUBLIC_WHATSAPP_GW_URL: ${NEXT_PUBLIC_WHATSAPP_GW_URL}
       NEXT_PUBLIC_MAIN_SERVICE: ${NEXT_PUBLIC_MAIN_SERVICE}
     ports:

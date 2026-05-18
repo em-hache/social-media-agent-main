@@ -5,7 +5,8 @@
 
 INSERT INTO users (id, name, alias, email, number, roles) VALUES
     ('122@lid', 'Antonia M',  'Anto',  'antonia@m.com',       '122@lid', '["admin"]'),
-    ('111@lid', 'Pepa López',  'Pepa', 'pepa@lopez.com', '112@lid', '["admin"]');
+    ('111@lid', 'Pepa López',  'Pepa', 'pepa@lopez.com', '112@lid', '["admin"]'),
+    ('1', 'Admin',  'Admin', 'admin@org.com', '113@lid', '["admin"]');
 
 -- ─── Recipients ─────────────────────────────────────────────────────────────
 
